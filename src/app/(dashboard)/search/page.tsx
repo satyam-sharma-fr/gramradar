@@ -83,7 +83,7 @@ export default function SearchPage() {
         return;
       }
 
-      toast.success(`Found ${data.resultCount} profiles`);
+      toast.success("Search started! We're finding influencers for you...");
       router.push(`/search/${data.searchId}`);
     } catch {
       toast.error("Something went wrong");
