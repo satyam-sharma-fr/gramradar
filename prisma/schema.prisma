@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Credits
+  credits       Int       @default(25)
+  plan          Plan      @default(FREE)
+
+  // Relations
+  accounts Account[]
+  sessions Session[]
+  searches Search[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Search {
+  id        String       @id @default(cuid())
+  userId    String
+  query     String
+  type      SearchType
+  filters   Json?
+  status    SearchStatus @default(PENDING)
+  resultCount Int        @default(0)
+  creditsUsed Int        @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results Profile[]
+
+  @@map("searches")
+}
+
+model Profile {
+  id              String  @id @default(cuid())
+  searchId        String
+  username        String
+  fullName        String?
+  bio             String?
+  profilePicUrl   String?
+  website         String?
+  email           String?
+  phone           String?
+  isVerified      Boolean @default(false)
+  isBusinessAccount Boolean @default(false)
+  category        String?
+  followers       Int     @default(0)
+  following       Int     @default(0)
+  postsCount      Int     @default(0)
+  engagementRate  Float?
+  avgLikes        Float?
+  avgComments     Float?
+  city            String?
+  country         String?
+  externalUrls    Json?
+  rawData         Json?
+  createdAt       DateTime @default(now())
+
+  search Search @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  userId        String
+  type          TransactionType
+  amount        Int             // in paise for INR
+  credits       Int
+  status        PaymentStatus   @default(PENDING)
+  razorpayOrderId   String?     @unique
+  razorpayPaymentId String?     @unique
+  razorpaySignature String?
+  plan          Plan?
+  createdAt     DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+enum Plan {
+  FREE
+  STARTER
+  GROWTH
+  PRO
+}
+
+enum SearchType {
+  KEYWORD
+  HASHTAG
+  LOCATION
+  USERNAME
+}
+
+enum SearchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum TransactionType {
+  SUBSCRIPTION
+  TOPUP
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
